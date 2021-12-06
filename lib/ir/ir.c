@@ -14,10 +14,10 @@ volatile static uint8_t data[32];
 volatile static uint8_t data_ready;
 
 /**
- * @brief Funktion um empfangene IR Daten zu verarbeiten
+ * @brief function to get the received ir data
  *
- * @param data Zeiger auf empfangene Daten
- * @return uint8_t 1 wenn erfolgreich
+ * @param data pointer to the received data
+ * @return uint8_t 1 is successfull
  *
  * NEC Protocol:
  * 9ms HIGH Pulse followed by 4.5ms LOW is our starting signal. Then our 32 Bits of data is transmitted
