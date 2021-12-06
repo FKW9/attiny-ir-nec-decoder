@@ -1,72 +1,68 @@
 /**
- * @file ir.c
- * @author Florian W
- * @brief Routine um empfangenes IR Signal mit NEC Protokoll zu dekodieren.
+ * @file    ir.c
+ * @author  Florian W
+ * @brief   Very leightweight routine to decode a received IR signal with NEC protocol
  * @version 0.1
- * @date 2021-12-06
- *
- * @copyright Copyright (c) 2021
+ * @date    2021-12-06
  *
  */
 #include "ir.h"
 
 volatile static uint8_t overflows;
 volatile static uint8_t status;
-volatile static uint8_t daten[32];
-volatile static uint8_t daten_fertig;
+volatile static uint8_t data[32];
+volatile static uint8_t data_ready;
 
 /**
  * @brief Funktion um empfangene IR Daten zu verarbeiten
  *
  * @param data Zeiger auf empfangene Daten
  * @return uint8_t 1 wenn erfolgreich
+ *
+ * NEC Protocol:
+ * 9ms HIGH Pulse followed by 4.5ms LOW is our starting signal. Then our 32 Bits of data is transmitted
+ *
+ *                                     |    HIGH BYTE    |     LOW BYTE     |
+ * |<-------- 16 Bit Address --------->|< 8 Bit Command >|<8Bit inv.Command>|
+ * | 0 0 0 0 0 0 0 0 | 1 1 1 1 1 1 1 1 | 0 0 0 0 0 1 0 1 | 1 1 1 1 1 0 1 0  |
+ *
  */
 uint8_t ir_get_data(uint8_t *data) {
 
-    uint8_t daten_empfangen = FALSE;
+    uint8_t data_received = 0;
 
-    if(daten_fertig){
+    if(data_ready){
 
         uint8_t command_HB = 0;
         uint8_t command_LB = 0;
         uint8_t power_HB   = 1;
         uint8_t power_LB   = 1;
 
-        /**
-         * NEC Protokoll:
-         * 9ms HIGH Puls gefolgt von 4.5ms LOW ist Startsignal, danach 32Bit Daten
-         *
-         * |<-------- 16 Bit Adresse --------->|< 8 Bit Command >|<8Bit inv.Command>|
-         * | 0 0 0 0 0 0 0 0 | 1 1 1 1 1 1 1 1 | 0 0 0 0 0 1 0 1 | 1 1 1 1 1 0 1 0  |
-         *                                     |    HIGH BYTE    |     LOW BYTE     |
-         */
-
-        // rechte 8 Bit aufsummieren (invers Befehl)
+        // sum up low byte of data (invers of highbyte)
         for (uint8_t i=31; i>23; i--) {
-            command_LB += daten[i]*power_LB;
+            command_LB += data[i]*power_LB;
             power_LB *= 2;
         }
 
-        // linken 8 Bit aufsummieren (Befehl)
+        // sum up high byte of data
         for (uint8_t i=23; i>15; i--) {
-            command_HB += daten[i]*power_HB;
+            command_HB += data[i]*power_HB;
             power_HB *= 2;
         }
 
-        // Daten korrekt empfangen?
-        // Befehl muss mit invertierten Befhl übereinstimmen -> CMD == ~INV_CMD bzw. in Summe beide 255
+        // check data if it is correct
         if(command_LB+command_HB==255){
             *data = command_LB;
-             daten_empfangen = TRUE;
-        } else daten_empfangen = FALSE;
+             data_received = 1;
+        } else data_received = 0;
 
-        daten_fertig = 0;
+        data_ready = 0;
         GIMSK = (1<<PCIE);
         PCMSK = (1<<PCINT3);
 
     }
 
-    return daten_empfangen;
+    return data_received;
 }
 
 ISR(TIM0_OVF_vect) {
@@ -75,25 +71,24 @@ ISR(TIM0_OVF_vect) {
 }
 
 ISR(PCINT0_vect) {
-    static uint8_t zeit;
+    static uint8_t time;
     static uint8_t index;
 
     if(status != 0){
-        zeit      = overflows;
+        time      = overflows;
         overflows = 0;
     }
 
     switch(status){
-
         case 0:
             index  = 0;
-            status = 1;             //Datenübertragung beginnt
-            overflows = 0;          //
-            TCCR0B    = (1<<CS00);  //Zählung starten
+            status = 1;             // data transmission started
+            overflows = 0;
+            TCCR0B    = (1<<CS00);  // timer starts counting
             break;
 
-        case 1: //Ende 9ms Puls
-            if((zeit >= 30) && (zeit <= 40)){
+        case 1: // end of 9ms pulse
+            if((time >= 30) && (time <= 40)){
                 status = 2;
             } else {
                 TCCR0B = 0;
@@ -101,8 +96,8 @@ ISR(PCINT0_vect) {
             }
             break;
 
-        case 2: //Ende 4.5ms Puls
-            if((zeit >= 13) && (zeit <= 21)){
+        case 2: // end of 4.5ms pulse
+            if((time >= 13) && (time <= 21)){
                 status = 3;
             } else {
                 TCCR0B = 0;
@@ -110,8 +105,8 @@ ISR(PCINT0_vect) {
             }
             break;
 
-        case 3: //Ende 512us Puls
-            if((zeit >= 0) && (zeit <= 4)){
+        case 3: // end of 512us pulse
+            if((time >= 0) && (time <= 4)){
                 status = 4;
             } else {
                 TCCR0B = 0;
@@ -120,13 +115,12 @@ ISR(PCINT0_vect) {
             break;
 
         case 4:
+            if((time >= 0) && (time <= 9)){
 
-            if((zeit >= 0) && (zeit <= 9)){
-
-                if (zeit >= 4){
-                    daten[index] = 1;
+                if (time >= 4){
+                    data[index] = 1;
                 } else {
-                    daten[index] = 0;
+                    data[index] = 0;
                 }
 
                 index++;
@@ -135,7 +129,7 @@ ISR(PCINT0_vect) {
                     GIMSK  = 0;
                     PCMSK  = 0;
                     status = 0;
-                    daten_fertig = 1;
+                    data_ready = 1;
                     break;
                 }
                 status = 3;
