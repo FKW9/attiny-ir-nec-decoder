@@ -5,6 +5,13 @@
  * @version 0.1
  * @date    2021-12-06
  *
+ * NEC Protocol:
+ * 9ms HIGH Pulse followed by 4.5ms LOW is our starting signal. Then our 32 Bits of data is transmitted
+ *
+ *                   |  logical invers |                 |  logical invers  |
+ * |< 8 Bit Address >|< 8 Bit Address >|< 8 Bit Command >|<8Bit inv.Command>|
+ * | 0 0 0 0 0 0 0 0 | 1 1 1 1 1 1 1 1 | 0 0 0 0 0 1 0 1 | 1 1 1 1 1 0 1 0  |
+ *
  */
 #include "ir.h"
 
@@ -13,25 +20,53 @@ volatile static uint8_t ir_data_ready;
 
 /**
  * @brief function to get the received ir data
+ * It only returns the high byte of the data and does not cross-check it with the invers byte.
+ * This method uses the least flash space and is the fastest.
  *
  * @param data pointer to the received data, value between 0-255
  * @return uint8_t 1 is successfull
- *
- * NEC Protocol:
- * 9ms HIGH Pulse followed by 4.5ms LOW is our starting signal. Then our 32 Bits of data is transmitted
- *
- *                                     |    HIGH BYTE    |     LOW BYTE     |
- * |<-------- 16 Bit Address --------->|< 8 Bit Command >|<8Bit inv.Command>|
- * | 0 0 0 0 0 0 0 0 | 1 1 1 1 1 1 1 1 | 0 0 0 0 0 1 0 1 | 1 1 1 1 1 0 1 0  |
- *
  */
 uint8_t ir_get_data(uint8_t *data) {
+
+    if(ir_data_ready){
+
+        uint8_t command = 0;
+        uint8_t power = 1;
+
+        // sum up data of command byte
+        for (uint8_t i=23; i>15; i--) {
+            command += ir_data[i]*power;
+            power *= 2;
+        }
+
+        *data = command;
+        ir_data_ready=0;
+
+        // enable pin change interrupt again
+        GIMSK = (1<<PCIE);
+        PCMSK = (1<<PCINT3);
+
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief function to get the received ir data
+ * It returns the Address and Data. Both are checked with their received invers.
+ *
+ * @param data pointer to the received data, value between 0-255
+ * @param addr pointer to the received address, value between 0-255
+ * @return uint8_t 1 is successfull
+ */
+uint8_t ir_get_all_data(uint8_t *data, uint8_t *addr) {
 
     uint8_t ir_data_received = 0;
 
     if(ir_data_ready){
 
         uint8_t command[2] = {0, 0};
+        uint8_t address[2] = {0, 0};
         uint8_t power = 1;
 
         // sum up low byte of data (invers of highbyte)
@@ -47,13 +82,28 @@ uint8_t ir_get_data(uint8_t *data) {
             power *= 2;
         }
 
+        // sum up low byte of addr (invers of highbyte)
+        power = 1;
+        for (uint8_t i=15; i>7; i--) {
+            address[0] += ir_data[i]*power;
+            power *= 2;
+        }
+
+        // sum up high byte of addr
+        power = 1;
+        for (uint8_t i=8; i>0; i--) {
+            address[1] += ir_data[i-1]*power;
+            power *= 2;
+        }
+
         // check data if it is correct
-        if(command[0]+command[1]==255){
+        if(command[0]+command[1]+address[0]+address[1]==510){
             *data = command[0];
+            *addr = address[0];
              ir_data_received = 1;
         } else ir_data_received = 0;
 
-        ir_data_ready=0;
+        ir_data_ready = 0;
 
         // enable pin change interrupt again
         GIMSK = (1<<PCIE);
