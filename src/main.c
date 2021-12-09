@@ -2,7 +2,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-#include "../lib/ir/ir.h"
+#include "../lib/ir_fcpu7mhz/ir.h"
+// #include "../lib/ir/ir.h"
 
 uint8_t ir_data = 0;
 uint8_t ir_addr = 0;
