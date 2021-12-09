@@ -15,7 +15,6 @@ int main() {
 
     /** initialize timer 0 overflow interrupt for counting IR pulses **/
     TIMSK = (1<<TOIE0);     // Timer/Counter0 Overflow Interrupt Enable
-    DDRB = 1<<4;
 
     sei();                  // Enable global interrupts
 
@@ -25,8 +24,7 @@ int main() {
         // }
 
         if(ir_get_all_data(&ir_data, &ir_addr)){
-            PORTB ^= 1<<4;
+            // do something with the data
         }
     }
 }
-
