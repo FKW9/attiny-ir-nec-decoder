@@ -1,7 +1,7 @@
 #include <inttypes.h>
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 #include "../lib/ir/ir.h"
 
 uint8_t ir_data = 0;
@@ -15,17 +15,18 @@ int main() {
 
     /** initialize timer 0 overflow interrupt for counting IR pulses **/
     TIMSK = (1<<TOIE0);     // Timer/Counter0 Overflow Interrupt Enable
+    DDRB = 1<<4;
 
     sei();                  // Enable global interrupts
 
     while(1) {
-        if(ir_get_data(&ir_data)){
-            // do something with the data
-        }
+        // if(ir_get_data(&ir_data)){
+        //     // do something with the data
+        // }
 
-        //if(ir_get_all_data(&ir_data, &ir_addr)){
-        //    // do something with the data
-        //}
+        if(ir_get_all_data(&ir_data, &ir_addr)){
+            PORTB ^= 1<<4;
+        }
     }
 }
 
