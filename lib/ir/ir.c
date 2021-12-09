@@ -123,15 +123,17 @@ uint8_t ir_get_all_data(uint8_t *data, uint8_t *addr) {
  * 4 = valid rising edge after 562us OR 1687us, check if it is a 0 or 1, then go back to status 3
  */
 volatile static uint8_t status;
-volatile static uint8_t overflows; // timer overflows
+volatile static uint16_t overflows; // timer overflows
 
 ISR(TIMER0_OVF_vect) {
-    if(status!=0)    overflows++;
-    if(overflows>38) status = 0;
+    if(status!=0)
+        overflows++;
+    if(overflows>(OVF_S_H+OVF_H))
+        status = 0;
 }
 
 ISR(PCINT0_vect) {
-    static uint8_t time;
+    static uint16_t time;
     static uint8_t index;
 
     if(status != 0){
@@ -148,7 +150,7 @@ ISR(PCINT0_vect) {
             break;
 
         case 1: // end of 9ms pulse
-            if(time >= 34){
+            if(time >= OVF_S_H){
                 status = 2;
             } else {
                 TCCR0B = 0;
@@ -157,7 +159,7 @@ ISR(PCINT0_vect) {
             break;
 
         case 2: // end of 4.5ms pulse
-            if((time >= 16) && (time <= 18)){
+            if(time >= OVF_S_L){
                 status = 3;
             } else {
                 TCCR0B = 0;
@@ -166,7 +168,7 @@ ISR(PCINT0_vect) {
             break;
 
         case 3: // end of 512us pulse
-            if((time >= 1) && (time <= 3)){
+            if(time >= OVF_H){
                 status = 4;
             } else {
                 TCCR0B = 0;
@@ -175,12 +177,12 @@ ISR(PCINT0_vect) {
             break;
 
         case 4:
-            if(time <= 8){
+            if(time < OVF_L+OVF_H){
 
-                if (time >= 4){
+                if (time > OVF_L-OVF_H){
                     ir_data[index] = 1; // received a logic one
                 } else {
-                    ir_data[index] = 0; // reveived a logic zero
+                    ir_data[index] = 0; // received a logic zero
                 }
 
                 index++;
