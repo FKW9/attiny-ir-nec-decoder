@@ -10,14 +10,16 @@ The library includes two functions to process the ir data.
 
 ## Memory Usage
 
-- Standard version for clock frequencies from 1-16MHz
+Standard version for clock frequencies from 1-16MHz
+
 | Function      | RAM         | Flash |
 | ------------- |-------------| ----- |
 | ```ir_get_data``` | 40 bytes | 516 bytes |
 | ```ir_get_all_data``` | 41 bytes | 648 bytes |
 | both  | 41 bytes | 706 bytes |
 
-- Modified version for clock frequencies up to 7MHz
+Modified version for clock frequencies up to 7MHz
+
 | Function      | RAM         | Flash |
 | ------------- |-------------| ----- |
 | ```ir_get_data``` | 36 bytes | 340 bytes |
@@ -28,3 +30,4 @@ The library includes two functions to process the ir data.
 
 - Used an Arduino Uno as ISP to program the ATTiny45
 - Tested with 1MHz and 8MHz
+- Used [IR Sensor](https://www.google.com/search?q=vs1838b+datasheet)
