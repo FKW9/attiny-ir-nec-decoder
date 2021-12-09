@@ -20,9 +20,9 @@ The library includes two functions to process the ir data.
 - Modified version for clock frequencies up to 7MHz
 | Function      | RAM         | Flash |
 | ------------- |-------------| ----- |
-| ```ir_get_data``` | 36 bytes | 340 bytes |
-| ```ir_get_all_data``` | 37 bytes | 472 bytes |
-| both  | 37 bytes | 530 bytes |
+| ```ir_get_data``` | 38 bytes | 442 bytes |
+| ```ir_get_all_data``` | 39 bytes | 584 bytes |
+| both  | 39 bytes | 642 bytes |
 
 ## Hardware setup
 
