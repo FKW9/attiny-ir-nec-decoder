@@ -12,6 +12,22 @@
 #ifndef LIB_IR_IR_H_
 #define LIB_IR_IR_H_
 
+#define NEC_START_H 9000
+#define NEC_START_L 4500
+#define NEC_ONE     562
+#define NEC_ZERO    1687
+#define TIMER_RES   8
+
+#ifndef F_CPU
+    #error F_CPU not defined!
+#endif
+
+#define TIMER_OVERFLOW (1000000/(F_CPU/(1 << (TIMER_RES))))
+#define OVF_S_H ((uint16_t) (NEC_START_H) / (TIMER_OVERFLOW))
+#define OVF_S_L ((uint16_t) (NEC_START_L) / (TIMER_OVERFLOW))
+#define OVF_H   ((uint16_t) (NEC_ONE)     / (TIMER_OVERFLOW))
+#define OVF_L   ((uint16_t) (NEC_ZERO)    / (TIMER_OVERFLOW))
+
 /**
  * @brief function to get the received ir data
  * It only returns the high byte of the data and does not cross-check it with the invers byte.
