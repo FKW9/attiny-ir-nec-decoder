@@ -1,6 +1,6 @@
 # ATTiny IR NEC Decoder
 
-Very light-weight & small-size library for ATTiny13/25/45/85 to decode an IR signal with NEC Protocol.
+Very light-weight library for ATTiny13/25/45/85 to decode an IR signal with NEC Protocol.
 
 ## Features
 
